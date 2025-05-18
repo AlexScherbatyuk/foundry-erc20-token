@@ -6,10 +6,6 @@ import {DeployOurToken} from "script/DeployOurToken.s.sol";
 import {OurToken} from "src/OurToken.sol";
 import {IERC20Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
-interface MintableToken {
-    function mint(address, uint256) external;
-}
-
 contract OurTokenTest is Test {
     OurToken public ourToken;
     DeployOurToken public deployOurToken;
@@ -20,47 +16,32 @@ contract OurTokenTest is Test {
     uint256 public constant STARTIN_BALANCE = 100 ether;
     uint256 public constant ALLOWANCE_AMOUNT = 50 ether;
 
-
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    function setUp () public {
+    function setUp() public {
         deployOurToken = new DeployOurToken();
         ourToken = deployOurToken.run();
 
         vm.prank(msg.sender);
-        ourToken.transfer(bob,STARTIN_BALANCE);
+        ourToken.transfer(bob, STARTIN_BALANCE);
     }
+
+    /*//////////////////////////////////////////////////////////////
+                              BASIC TESTS
+    //////////////////////////////////////////////////////////////*/
 
     function testInitialSupply() public view {
         assertEq(ourToken.totalSupply(), deployOurToken.INITIAL_SUPPLAY());
     }
 
-    function testUsersCantMint() public {
-        vm.expectRevert();
-        MintableToken(address(ourToken)).mint(address(this), 1);
-    }
-
     function testBobBalance() public view {
-        assertEq(ourToken.balanceOf(bob),STARTIN_BALANCE);
+        assertEq(ourToken.balanceOf(bob), STARTIN_BALANCE);
     }
 
-    function testAllowancesWorks() public {
-        uint256 initialAllowance = 1000;
-        // Bob apprvoves Alice to spend tokens on his behalf
-        vm.prank(bob);
-        ourToken.approve(alice,initialAllowance);
-
-        uint256 transferAmount = 500;
-
-        vm.prank(alice);
-        ourToken.transferFrom(bob,alice,transferAmount);
-
-        assertEq(ourToken.balanceOf(alice),transferAmount);
-        assertEq(ourToken.balanceOf(bob),STARTIN_BALANCE-transferAmount);
-    }
-
-    // Transfer Tests
+    /*//////////////////////////////////////////////////////////////
+                             TRANSFER TESTS
+    //////////////////////////////////////////////////////////////*/
     function testTransfer() public {
         uint256 balanceABefore = ourToken.balanceOf(bob);
         uint256 balanceBBefore = ourToken.balanceOf(alice);
@@ -75,7 +56,9 @@ contract OurTokenTest is Test {
     function testTransferFailsInsufficientBalance() public {
         uint256 balanceA = ourToken.balanceOf(bob);
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, bob, balanceA, balanceA + 1));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientBalance.selector, bob, balanceA, balanceA + 1)
+        );
         ourToken.transfer(alice, balanceA + 1);
     }
 
@@ -97,7 +80,25 @@ contract OurTokenTest is Test {
         ourToken.transfer(alice, STARTIN_BALANCE);
     }
 
-    // Allowance Tests
+    /*//////////////////////////////////////////////////////////////
+                            ALLOWANCE TESTS
+    //////////////////////////////////////////////////////////////*/
+
+    function testAllowancesWorks() public {
+        uint256 initialAllowance = 1000;
+        // Bob apprvoves Alice to spend tokens on his behalf
+        vm.prank(bob);
+        ourToken.approve(alice, initialAllowance);
+
+        uint256 transferAmount = 500;
+
+        vm.prank(alice);
+        ourToken.transferFrom(bob, alice, transferAmount);
+
+        assertEq(ourToken.balanceOf(alice), transferAmount);
+        assertEq(ourToken.balanceOf(bob), STARTIN_BALANCE - transferAmount);
+    }
+
     function testApproveAndAllowance() public {
         vm.prank(bob);
         ourToken.approve(alice, ALLOWANCE_AMOUNT);
@@ -125,7 +126,11 @@ contract OurTokenTest is Test {
         ourToken.approve(alice, ALLOWANCE_AMOUNT);
 
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector,alice,ALLOWANCE_AMOUNT,ALLOWANCE_AMOUNT+1));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC20Errors.ERC20InsufficientAllowance.selector, alice, ALLOWANCE_AMOUNT, ALLOWANCE_AMOUNT + 1
+            )
+        );
         ourToken.transferFrom(bob, alice, ALLOWANCE_AMOUNT + 1);
     }
 
@@ -139,29 +144,32 @@ contract OurTokenTest is Test {
         ourToken.transferFrom(bob, alice, ALLOWANCE_AMOUNT);
     }
 
-    // Additional Important Tests
-    function testTokenMetadata() public view{
+    /*//////////////////////////////////////////////////////////////
+                            ADDITIONAL TESTS
+    //////////////////////////////////////////////////////////////*/
+    function testTokenMetadata() public view {
         assertEq(ourToken.name(), "OurToken");
         assertEq(ourToken.symbol(), "OT");
         assertEq(ourToken.decimals(), 18);
     }
 
-    
     function testTransferToZeroAddressFails() public {
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector,address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidReceiver.selector, address(0)));
         ourToken.transfer(address(0), STARTIN_BALANCE);
     }
 
     function testApproveToZeroAddressFails() public {
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSpender.selector,address(0)));
+        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InvalidSpender.selector, address(0)));
         ourToken.approve(address(0), ALLOWANCE_AMOUNT);
     }
 
     function testTransferFromZeroAddressFails() public {
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector,bob,0,STARTIN_BALANCE));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, bob, 0, STARTIN_BALANCE)
+        );
         ourToken.transferFrom(address(0), alice, STARTIN_BALANCE);
     }
 

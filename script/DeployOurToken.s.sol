@@ -6,6 +6,7 @@ import {OurToken} from "src/OurToken.sol";
 
 contract DeployOurToken is Script {
     uint256 public constant INITIAL_SUPPLAY = 1000 ether;
+
     function run() external returns (OurToken) {
         vm.startBroadcast();
         OurToken ourToken = new OurToken(INITIAL_SUPPLAY);
